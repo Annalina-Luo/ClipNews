@@ -10,55 +10,35 @@ import os
 import pickle
 import numpy as np
 import nltk
-# nltk.download('punkt')
+import spacy
+
+nltk.download('punkt')
 
 # UNK, PAD = '<unk>', '<pad>'  # 未知字，padding符号
 
 
 class NewsDataset(data.Dataset):
 
-    def __init__(self, image_dir, ann_path, vocab, vocab1, transform=None, caption_type='caption'):
+    def __init__(self, image_dir, ann_path, vocab, vocab1, transform=None):
 
         self.image_dir = image_dir
         self.ann = json.load(open(ann_path, 'rb'))
-        print("self.ann", len(self.ann))
-        if "train" in ann_path:
-            self.ann = self.ann[:5000]
+        # print("self.ann", len(self.ann))
+        # if "train" in ann_path:
+        #     self.ann = self.ann
         self.vocab = vocab
         self.vocab1 = vocab1
         self.transform = transform
-        self.caption_type = 'caption'
 
     def __getitem__(self, index):
-
-        # image part
-        # image_id = str(self.ann[index]['id'])
-        # source = str(self.ann[index]['source'])
-        # source = self.ann[index]['source']
-        # zero = 7 - len(image_id)
-
-        # for i in range(zero):
-        #     image_id = '0' + image_id
-        # file_d = image_id[:4]
-        # image_d = image_id[4:]
-        # image_dir = self.image_dir
-        # if source == 'usa':
-        #     image_dir = self.image_dir + '/usa/images'
-        # if source == 'wash':
-        #     image_dir = self.image_dir + '/WashingtonPost/images'
-        # if source == 'guardian':
-        #     image_dir = self.image_dir + '/guardian/images'
-        # if source == 'bbc':
-        #     image_dir = self.image_dir + '/bbc/images'
         image_path = self.ann[index]['image_path']
 
         image = Image.open(image_path).convert('RGB')
 
         if self.transform is not None:
             image = self.transform(image)
-        # caption part
-        # Convert caption (string) to word ids.
-        # Caption
+
+        # Caption: Convert caption (string) to word ids.
         caption = self.ann[index]['caption']
         # tokens = nltk.tokenize.word_tokenize(caption.lower())
         tokens = caption.lower().split(' ')
@@ -76,24 +56,29 @@ class NewsDataset(data.Dataset):
         article1.extend([self.vocab1(token1) for token1 in tokens1])
         article1.append(self.vocab1('<end>'))
         target1 = torch.Tensor(article1)
-        # print(target1.size())
 
-        # print(tokens_tensor.size())
-        # print(segments_tensors.size())
-        # print(target1.size())
-        # print('---------')
-
-        # Reference
+        # Reference, named entity
+        nlp = spacy.load('en_core_web_sm')
         reference = self.ann[index]['article']
-        tokens2 = nltk.tokenize.word_tokenize(reference.lower()[:300])
-        # reference1 = self.ann[index]['reference1']
-        # tokens3 = nltk.tokenize.word_tokenize(reference1.lower()[:200])
+
+        # tokens2 = nltk.tokenize.word_tokenize(reference.lower()[:300])
+        # # reference1 = self.ann[index]['reference1']
+        # # tokens3 = nltk.tokenize.word_tokenize(reference1.lower()[:200])
+        # reference1 = []
+        # reference1.append(self.vocab('<start>'))
+        # reference1.extend([self.vocab(token2) for token2 in tokens2])
+        # # reference1.extend([self.vocab(token3) for token3 in tokens3])
+        # reference1.append(self.vocab('<end>'))
+        # reference1 = torch.Tensor(reference1)
+
+        doc = nlp(reference.lower()[:300])
+        ents = [e.text for e in doc.ents]
+        labels = [e.label_ for e in doc.ents]
         reference1 = []
-        reference1.append(self.vocab('<start>'))
-        reference1.extend([self.vocab(token2) for token2 in tokens2])
+        reference1.append(self.vocab1('<start>'))
+        reference1.extend([self.vocab1(token2) for token2 in ents])
         # reference1.extend([self.vocab(token3) for token3 in tokens3])
-        reference1.append(self.vocab('<end>'))
-        reference1 = torch.Tensor(reference1)
+        reference1.append(self.vocab1('<end>'))
 
         return image, target, self.ann[index]['id'], target1, reference1
 
@@ -137,7 +122,6 @@ def collate_fn(data):
     for i, cap in enumerate(captions):
         end = lengths[i]
         targets[i, :end] = cap[:end]
-    # print(targets.size())
 
     # Article
     lengths1 = [len(article) for article in articles]
@@ -159,20 +143,3 @@ def collate_fn(data):
         mask2[i, :end] = tmp2[i, :end]
 
     return images, targets, lengths, ids, targets1, lengths1, mask1, targets2, lengths2, mask2
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--image_dir', type=str,
-                        default='/p/newscaptioning/data',
-                        help='image directory for Reuters')
-    parser.add_argument('--ann_path', type=str, default='/u/fl3es/attend/visualdata',
-                        help='path for annotation file')
-
-    parser.add_argument('--vocab_path', type=str, default='./vocab/vocab_w1.pkl',
-                        help='vocab file path')
-
-    parser.add_argument('--caption_type', type=str, default='caption',
-                        help='caption, cleaned_caption, template_toke_coarse, template_toke_fine, \
-                        compressed_caption_1, compressed_caption_2')
-    args = parser.parse_args()

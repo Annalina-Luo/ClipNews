@@ -36,7 +36,7 @@ dependencies:
       - pyzmq==19.0.0
       - gunicorn==20.0.4
       - schema==0.7.1
-      - spacy==2.1.9
+      - spacy==2.3.5
       - stop-words==2018.7.23
       - tensorboard==2.1.1
       - textstat==0.6.0

@@ -79,8 +79,6 @@ class Encoder(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
         self.scale = torch.sqrt(torch.FloatTensor([hid_dim])).to(device)
-        # self.lstm = nn.LSTM(hid_dim, hid_dim, batch_first=True)
-        # self.lstm1 = nn.LSTM(hid_dim, hid_dim, batch_first=True)
 
     def forward(self, src, src_mask, imgs):
         # src = [batch size, src len]
@@ -92,12 +90,6 @@ class Encoder(nn.Module):
         pos = torch.arange(0, src_len).unsqueeze(
             0).repeat(batch_size, 1).to(device)
 
-        # pos = [batch size, src len]
-        # print(src)
-        # print(pos)
-        # print(self.tok_embedding(src))
-        # print(self.pos_embedding(pos))
-        # exit()
         src = self.dropout(
             (self.tok_embedding(src) * self.scale) + self.pos_embedding(pos))
 
@@ -481,8 +473,8 @@ class Seq2Seq(nn.Module):
 
         self.encoder = encoder
         self.decoder = decoder
-        self.src_pad_idx = 0
-        self.trg_pad_idx = 0
+        self.src_pad_idx = src_pad_idx
+        self.trg_pad_idx = trg_pad_idx
         # self.device = device
         self.l1 = nn.Linear(2048, 512)
         self.dropout = nn.Dropout(0.1)

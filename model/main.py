@@ -171,9 +171,10 @@ def main(args):
     target: caption embedding by vocab 
     self.ann[index]['id']: id
     target1: article embedding by vocab1
-    reference1: article embedding by vocab
+    reference1: named entity
     """
     print('train set size: {}'.format(len(train_data)))
+    # batch
     train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True,
                                                num_workers=args.num_workers, collate_fn=collate_fn)
     """
@@ -190,19 +191,22 @@ def main(args):
     mask2: ones with reference lengths
     """
 
-    dev_ann_path = os.path.join(args.ann_path, 'VisualNews_val.json')
+    dev_ann_path = os.path.join(args.ann_path, 'val.json')
     dev_data = NewsDataset(args.image_dir, dev_ann_path,
                            vocab, vocab1, transform)
     print('dev set size: {}'.format(len(dev_data)))
     val_loader = torch.utils.data.DataLoader(dataset=dev_data, batch_size=args.batch_size, shuffle=False,
                                              num_workers=args.num_workers, collate_fn=collate_fn)
+
     best_bleu4 = args.best_bleu4
     for epoch in range(args.start_epoch, args.epochs):
+
         print(epoch)
         if args.epochs_since_improvement == 20:
             break
         if args.epochs_since_improvement > 0 and args.epochs_since_improvement % 6 == 0:
             adjust_learning_rate(optimizer, 0.6)
+
         print("start trainning...")
         train(ImageEncoder=ImageEncoder,
               model=model,
@@ -214,6 +218,7 @@ def main(args):
               logger=train_logger,
               logging=True)
         print("finish training...")
+
         if epoch > 4:
             recent_bleu4 = validate(ImageEncoder=ImageEncoder,
                                     model=model,
