@@ -69,7 +69,6 @@ parser.add_argument('--checkpoint', type=str, default=None,
 parser.add_argument('--grad_clip', type=float, default=5.)
 parser.add_argument('--alpha_c', type=float, default=1.)
 parser.add_argument('--best_cider', type=float, default=0.)
-parser.add_argument('--best_cider', type=float, default=0.)
 parser.add_argument('--fine_tune_encoder', type=bool,
                     default=False, help='fine-tune encoder')
 

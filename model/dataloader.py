@@ -27,7 +27,8 @@ class NewsDataset(data.Dataset):
         self.transform = transform
 
     def __getitem__(self, index):
-        image_path = self.ann[index]['image_path']
+        image_path = os.path.join(
+            self.image_dir, self.ann[index]['image_path'])
 
         image = Image.open(image_path).convert('RGB')
 
