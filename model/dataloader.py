@@ -19,15 +19,11 @@ nltk.download('punkt')
 
 class NewsDataset(data.Dataset):
 
-    def __init__(self, image_dir, ann_path, vocab, vocab1, transform=None):
+    def __init__(self, image_dir, ann_path, vocab, transform=None):
 
         self.image_dir = image_dir
-        self.ann = json.load(open(ann_path, 'rb'))
-        # print("self.ann", len(self.ann))
-        # if "train" in ann_path:
-        #     self.ann = self.ann
+        self.ann = json.load(open(ann_path, 'r'))
         self.vocab = vocab
-        self.vocab1 = vocab1
         self.transform = transform
 
     def __getitem__(self, index):
@@ -52,13 +48,13 @@ class NewsDataset(data.Dataset):
         article = self.ann[index]['article']
         tokens1 = nltk.tokenize.word_tokenize(article.lower()[:300])
         article1 = []
-        article1.append(self.vocab1('<start>'))
-        article1.extend([self.vocab1(token1) for token1 in tokens1])
-        article1.append(self.vocab1('<end>'))
+        article1.append(self.vocab('<start>'))
+        article1.extend([self.vocab(token1) for token1 in tokens1])
+        article1.append(self.vocab('<end>'))
         target1 = torch.Tensor(article1)
 
         # Reference, named entity
-        nlp = spacy.load('en_core_web_sm')
+        nlp = spacy.load('en_core_web_lg')
         reference = self.ann[index]['article']
 
         # tokens2 = nltk.tokenize.word_tokenize(reference.lower()[:300])
@@ -72,13 +68,12 @@ class NewsDataset(data.Dataset):
         # reference1 = torch.Tensor(reference1)
 
         doc = nlp(reference.lower()[:300])
-        ents = [e.text for e in doc.ents]
+        ents = list(doc.ents)
         labels = [e.label_ for e in doc.ents]
         reference1 = []
-        reference1.append(self.vocab1('<start>'))
-        reference1.extend([self.vocab1(token2) for token2 in ents])
-        # reference1.extend([self.vocab(token3) for token3 in tokens3])
-        reference1.append(self.vocab1('<end>'))
+        reference1.append(self.vocab('<start>'))
+        reference1.extend([self.vocab(token2) for token2 in ents])
+        reference1.append(self.vocab('<end>'))
 
         return image, target, self.ann[index]['id'], target1, reference1
 
@@ -108,8 +103,8 @@ def collate_fn(data):
     image: news image
     captions: caption embedding by vocab 
     ids: id
-    articles: article embedding by vocab1
-    reference: article embedding by vocab
+    articles: article embedding by vocab
+    reference: named entity embedding by vocab
     """
 
     # Merge images (from tuple of 3D tensor to 4D tensor).

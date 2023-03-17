@@ -26,7 +26,8 @@ class Vocabulary(object):
 
     def __call__(self, word):
         if not word in self.word2idx:
-            return self.word2idx['<unk>']
+            self.add_word(word)
+            return len(self.word2idx)-1
             # return len(self.word2idx)+1
         return self.word2idx[word]
 
@@ -35,13 +36,9 @@ class Vocabulary(object):
 
 
 if __name__ == '__main__':
-    vocab2_dir = "E:\\ucl\\COMP0087_NLP\\group\\projects\\VisualNews-Repository\\vocab_1.pkl"
-    vocab1_dir = "E:\\ucl\\COMP0087_NLP\\group\\projects\\VisualNews-Repository\\vocab1_1.pkl"
-    VisualNews_train = "F:\\NLP\\transform-and-tell\\VisualNews_train.json"
+    vocab_dir = ".\\vocab.pkl"
+    VisualNews_train = ".\\train.json"
     vocab = Vocabulary()
-
-    with open(vocab1_dir, 'rb') as f:
-        vocab1 = pickle.load(f)
 
     with open(VisualNews_train, mode='r', encoding='utf-8') as f:
         news_list = json.load(f)
@@ -49,16 +46,10 @@ if __name__ == '__main__':
     def tokenizer(x): return x.split(' ')  # 以词为单位构建词表(数据集中词之间以空格隔开)
 
     for news in tqdm(news_list):
-        content = news["caption"]
+        content = news["article"][:300]
         for word in tokenizer(content):
-            ind = vocab1(word)
-            # print(word, ind)
-            vocab.add_word(word, ind)
-    # vocab.add_word('<unk>')
-    vocab.add_word('<unk>', vocab1("<unk>"))
+            vocab.add_word(word)
+    # vocab.add_word('<unk>', vocab("<unk>"))
 
     print(len(vocab))
-    pickle.dump(vocab, open(vocab2_dir, 'wb'))
-
-# caption_vocab, vocab, 422644
-# article_vocab, vocab1, 2581751
+    pickle.dump(vocab, open(vocab_dir, 'wb'))  # 482845

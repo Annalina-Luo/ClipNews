@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torchvision import transforms
 from tqdm import tqdm
-from model import Encoder, Decoder, EncoderLayer, MultiHeadAttentionLayer, PositionwiseFeedforwardLayer, DecoderLayer, Seq2Seq, translate_sentence, bleu, EncoderCNN
+from model import Encoder, Decoder, EncoderLayer, MultiHeadAttentionLayer, PositionwiseFeedforwardLayer, DecoderLayer, Seq2Seq, translate_sentence, bleu, EncoderCNN, ciderScore
 import os
 from dataloader import NewsDataset, collate_fn
 from nltk.translate.bleu_score import corpus_bleu
@@ -21,6 +21,7 @@ import spacy
 import random
 import math
 
+
 # Device configuration
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -34,9 +35,9 @@ parser.add_argument('--image_size', type=int, default=256,
 parser.add_argument('--crop_size', type=int, default=224,
                     help='size for randomly cropping images')
 parser.add_argument('--vocab_path', type=str,
-                    default='.\\caption_vocab.pkl', help='path for vocabulary wrapper')
-parser.add_argument('--vocab1_path', type=str,
-                    default='E:\\ucl\\COMP0087_NLP\\group\\projects\\VisualNews-Repository\\articale_vocab.pkl', help='article vocab')
+                    default='.\\vocab.pkl', help='path for vocabulary wrapper')
+# parser.add_argument('--vocab1_path', type=str,
+#                     default='.\\articale_vocab.pkl', help='article vocab')
 parser.add_argument('--image_dir', type=str,
                     default='./images_processed/', help='directory for resized images')
 parser.add_argument('--ann_path', type=str, default='./',
@@ -45,7 +46,8 @@ parser.add_argument('--log_step', type=int, default=100,
                     help='step size for prining log info')
 parser.add_argument('--save_step', type=int, default=1000,
                     help='step size for saving trained models')
-# parser.add_argument('--gts_file_dev', type=str, default='')
+# {image_id': image_id, 'caption': " ".join(preds)}
+parser.add_argument('--gts_file_dev', type=str, default='./val_gts.json')
 
 # Model parameters
 parser.add_argument('--embed_dim', type=int, default=512,
@@ -67,7 +69,7 @@ parser.add_argument('--checkpoint', type=str, default=None,
 parser.add_argument('--grad_clip', type=float, default=5.)
 parser.add_argument('--alpha_c', type=float, default=1.)
 parser.add_argument('--best_cider', type=float, default=0.)
-parser.add_argument('--best_bleu4', type=float, default=0.)
+parser.add_argument('--best_cider', type=float, default=0.)
 parser.add_argument('--fine_tune_encoder', type=bool,
                     default=False, help='fine-tune encoder')
 
@@ -82,7 +84,7 @@ def get_parameter_number(net):
 
 def main(args):
 
-    global best_bleu4, epochs_since_improvement, checkpoint, start_epoch, fine_tune_encoder, data_name, word_map, train_logger, dev_logger
+    global best_cider, epochs_since_improvement, checkpoint, start_epoch, fine_tune_encoder, data_name, word_map, train_logger, dev_logger
 
     fine_tune_encoder = args.fine_tune_encoder
 
@@ -91,14 +93,14 @@ def main(args):
         vocab = pickle.load(f)
     print('vocabulary size: {}'.format(len(vocab)))  # vocabulary size: 422644
     # Load article vocab
-    with open(args.vocab1_path, 'rb') as f:
-        vocab1 = pickle.load(f)
+    # with open(args.vocab1_path, 'rb') as f:
+    #     vocab1 = pickle.load(f)
     # Article vocabulary size:
-    print('Article vocabulary size: {}'.format(len(vocab1)))
+    # print('Article vocabulary size: {}'.format(len(vocab1)))
 
     if args.checkpoint is None:
-        enc = Encoder(len(vocab1), args.embed_dim, 1, 8, 512, 0.1)
-        dec = Decoder(len(vocab1), args.embed_dim, 2, 8, 512, 0.1)
+        enc = Encoder(len(vocab), args.embed_dim, 1, 8, 512, 0.1)
+        dec = Decoder(len(vocab), args.embed_dim, 2, 8, 512, 0.1)
 
         model = Seq2Seq(enc, dec, 0, 0)
         optimizer = optim.Adam(model.parameters(), lr=args.decoder_lr)
@@ -164,13 +166,13 @@ def main(args):
     # train_n_t32.json 和上面那个vocab对应
     train_ann_path = os.path.join(args.ann_path, 'train.json')
     train_data = NewsDataset(
-        args.image_dir, train_ann_path, vocab, vocab1, train_transform)
+        args.image_dir, train_ann_path, vocab, train_transform)
     """
     train_data:
     image: news image
     target: caption embedding by vocab 
     self.ann[index]['id']: id
-    target1: article embedding by vocab1
+    target1: article embedding by vocab
     reference1: named entity
     """
     print('train set size: {}'.format(len(train_data)))
@@ -193,12 +195,12 @@ def main(args):
 
     dev_ann_path = os.path.join(args.ann_path, 'val.json')
     dev_data = NewsDataset(args.image_dir, dev_ann_path,
-                           vocab, vocab1, transform)
+                           vocab, transform)
     print('dev set size: {}'.format(len(dev_data)))
     val_loader = torch.utils.data.DataLoader(dataset=dev_data, batch_size=args.batch_size, shuffle=False,
                                              num_workers=args.num_workers, collate_fn=collate_fn)
 
-    best_bleu4 = args.best_bleu4
+    best_cider = args.best_cider
     for epoch in range(args.start_epoch, args.epochs):
 
         print(epoch)
@@ -220,7 +222,7 @@ def main(args):
         print("finish training...")
 
         if epoch > 4:
-            recent_bleu4 = validate(ImageEncoder=ImageEncoder,
+            recent_cider = validate(ImageEncoder=ImageEncoder,
                                     model=model,
                                     val_loader=val_loader,
                                     criterion=criterion,
@@ -229,12 +231,9 @@ def main(args):
                                     logger=dev_logger,
                                     logging=True)
 
-            is_best = recent_bleu4 > best_bleu4
-            # is_best = 1
-            # recent_bleu4 = 1
-            # best_bleu4 = 1
-            best_bleu4 = max(recent_bleu4, best_bleu4)
-            print('best_bleu4:', best_bleu4)
+            is_best = recent_cider > best_cider
+            best_cider = max(recent_cider, best_cider)
+            print('best_cider:', best_cider)
             print('learning_rate:', args.decoder_lr)
             if not is_best:
                 args.epochs_since_improvement += 1
@@ -244,11 +243,11 @@ def main(args):
                 args.epochs_since_improvement = 0
 
         if epoch <= 4:
-            recent_bleu4 = 0
+            recent_cider = 0
             is_best = 1
 
         save_checkpoint(args.data_name, epoch, args.epochs_since_improvement,
-                        ImageEncoder, model, encoder_optimizer, optimizer, recent_bleu4, is_best)
+                        ImageEncoder, model, encoder_optimizer, optimizer, recent_cider, is_best)
 
 
 def train(ImageEncoder, model, train_loader, encoder_optimizer, optimizer, criterion, epoch, logger, logging=True):
@@ -360,17 +359,18 @@ def validate(ImageEncoder, model, val_loader, criterion, vocab, epoch, logger, l
 
     print('Epoch [{}/{}], Loss: {:.4f}, Perplexity: {:5.4f}'.format(epoch,
           args.epochs, losses.avg, np.exp(losses.avg)))
-    gts_file = args.gts_file_dev
-    eval_out = myeval(res, gts_file)
+    # gts_file = args.gts_file_dev
+    # eval_out = myeval(res, gts_file)
+
+    score = ciderScore(args.gts_file_dev, res)
 
     if logging:
-        for k in eval_out:
-            logger.scalar_summary(k, eval_out[k], epoch)
+        logger.scalar_summary(score, "Cider", epoch)
     # log into tf series
     if logging:
         logger.scalar_summary('loss', losses.avg, epoch)
         logger.scalar_summary('Perplexity', np.exp(losses.avg), epoch)
-    return eval_out['CIDEr']
+    return score
 
 
 if __name__ == '__main__':

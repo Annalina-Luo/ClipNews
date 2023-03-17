@@ -16,6 +16,8 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from build_vocab import Vocabulary
 import sys
 from torch.autograd import Variable
+from cider.cider import Cider
+import json
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -576,3 +578,16 @@ def bleu(arts, reference, model, word_map, caplens, imgs, device):
         model, arts, reference, word_map, caplens, imgs, device)
     prediction = prediction[:-1]  # remove <eos> token
     return prediction
+
+
+def ciderScore(gts_file, res):
+    gts = json.dump(open(gts_file, 'r'))
+    gts_dic = {}
+    res_dic = {}
+    for i in gts:
+        gts_dic[i["id"]] = i["caption"]
+    for i in res:
+        res_dic[res["image_id"]] = i["caption"]
+    scorer = Cider()
+    (score, scores) = scorer.compute_score(gts_dic, res_dic)
+    return score
