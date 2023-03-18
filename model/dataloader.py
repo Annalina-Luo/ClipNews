@@ -75,6 +75,7 @@ class NewsDataset(data.Dataset):
         reference1.append(self.vocab('<start>'))
         reference1.extend([self.vocab(token2) for token2 in ents])
         reference1.append(self.vocab('<end>'))
+        reference1 = torch.Tensor(reference1)
 
         return image, target, self.ann[index]['id'], target1, reference1
 
@@ -122,20 +123,20 @@ def collate_fn(data):
     # Article
     lengths1 = [len(article) for article in articles]
     targets1 = torch.zeros(len(articles), max(lengths1)).long()
-    mask1 = torch.zeros(len(articles), max(lengths1)).long()
-    tmp1 = torch.ones(len(articles), max(lengths1)).long()
+    # mask1 = torch.zeros(len(articles), max(lengths1)).long()
+    # tmp1 = torch.ones(len(articles), max(lengths1)).long()
     for i, article in enumerate(articles):
         end = lengths1[i]
         targets1[i, :end] = article[:end]
-        mask1[i, :end] = tmp1[i, :end]
+        # mask1[i, :end] = tmp1[i, :end]
 
     lengths2 = [len(re) for re in reference]
     targets2 = torch.zeros(len(reference), max(lengths2)).long()
-    mask2 = torch.zeros(len(reference), max(lengths2)).long()
-    tmp2 = torch.ones(len(reference), max(lengths2)).long()
+    # mask2 = torch.zeros(len(reference), max(lengths2)).long()
+    # tmp2 = torch.ones(len(reference), max(lengths2)).long()
     for i, re in enumerate(reference):
         end = lengths2[i]
         targets2[i, :end] = re[:end]
-        mask2[i, :end] = tmp2[i, :end]
+        # mask2[i, :end] = tmp2[i, :end]
 
-    return images, targets, lengths, ids, targets1, lengths1, mask1, targets2, lengths2, mask2
+    return images, targets, lengths, targets1, targets2

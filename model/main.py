@@ -10,7 +10,6 @@ from model import Encoder, Decoder, EncoderLayer, MultiHeadAttentionLayer, Posit
 import os
 from dataloader import NewsDataset, collate_fn
 from nltk.translate.bleu_score import corpus_bleu
-from myeval import myeval
 from build_vocab import Vocabulary
 import numpy as np
 from utils import *
@@ -261,7 +260,7 @@ def train(ImageEncoder, model, train_loader, encoder_optimizer, optimizer, crite
 
     t = tqdm(train_loader, desc='Train %d' % epoch)
 
-    for i, (imgs, caps, caplens, image_ids, arts, artlens, mask, reference, lenre, mask2) in enumerate(t):
+    for i, (imgs, caps, caplens, arts, reference) in enumerate(t):
         """
         train_loader:
         images: news images 4D
