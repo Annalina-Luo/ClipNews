@@ -12,6 +12,8 @@ def ann_json(mode, image_path):
 
     for split in db.splits.find({'split': mode}):
         print(count)
+        if count > 100:
+            break
         if os.path.exists(os.path.join(image_path, f"{split['_id']}.jpg")) == False:
             continue
         news = {}
@@ -27,7 +29,7 @@ def ann_json(mode, image_path):
         count += 1
 
     print(len(news_list))
-    with open(f"./{mode}.json", "w") as f:
+    with open(f"./{mode}_s.json", "w") as f:
         json.dump(news_list, f)
 
     return news_list
@@ -59,7 +61,7 @@ def gts_json(mode, image_path):
 
 if __name__ == "__main__":
     image_path = "F:/NLP\\transform-and-tell\\data\\goodnews\\goodnews\\images_processed\\"
-    # ann_json("train", image_path)
+    ann_json("train", image_path)
     # ann_json("val", image_path)
     # ann_json("test", image_path)
-    gts_json("val", image_path)
+    # gts_json("val", image_path)
