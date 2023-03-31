@@ -97,7 +97,7 @@ def main(args):
 
     criterion = nn.CrossEntropyLoss().to(device)
 
-    train_ann_path = os.path.join(args.ann_path, 'train_s.json')
+    train_ann_path = os.path.join(args.ann_path, 'train.json')
     train_data = NewsDataset(args.image_dir, train_ann_path)
     print('train set size: {}'.format(len(train_data)))
     train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True,
