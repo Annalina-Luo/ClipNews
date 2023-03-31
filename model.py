@@ -41,11 +41,12 @@ class Positional_Encoding(nn.Module):
 
     def __init__(self, d_model, max_len):
         super(Positional_Encoding, self).__init__()
-        pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        pe = torch.zeros(max_len, d_model).to(device)
+        position = torch.arange(
+            0, max_len, dtype=torch.float).unsqueeze(1).to(device)
         # position [max_len, dim]
         div_term = torch.exp(torch.arange(
-            0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+            0, d_model, 2).float() * (-math.log(10000.0) / d_model)).to(device)
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0)
@@ -403,29 +404,26 @@ def translate_sentence(model, src, src_mask, src_emb, caplens, imgs, device):
         enc_src = model.encoder_text[0](src_emb, src_mask)
 
     max_length = max(caplens)
-    outputs = text_model.get_input_embeddings().weight[0]
+    outputs = text_model.get_input_embeddings().weight[0].to(device)
     outputs = outputs.unsqueeze(0).unsqueeze(1).to(device)
-    results = torch.zeros([1])
-    mask = torch.ones([1, 1])
+    results = torch.zeros([1]).to(device)
+    mask = torch.ones([1, 1]).to(device)
     for i in range(max_length):
         trg_pad_mask = (mask != 0).unsqueeze(
-            1).unsqueeze(2)
-        trg_len = mask.shape[1]
+            1).unsqueeze(2).to(device)
+        trg_len = mask.shape[1].to(device)
         trg_sub_mask = torch.tril(torch.ones(
-            (trg_len, trg_len), device=device)).bool()
+            (trg_len, trg_len), device=device)).bool().to(device)
         trg_mask = trg_pad_mask & trg_sub_mask
 
         with torch.no_grad():
             output = model.decoder(
                 outputs, trg_mask, enc_image, enc_src, src_emb, src_mask, src)
-        print(output.shape)
 
         best_guess = output.argmax(2)[:, -1]
         results = torch.cat((results, best_guess), dim=0)
-        print(i, best_guess)
         outputs_1 = text_model.get_input_embeddings(
         ).weight[best_guess.unsqueeze(0)]
-        print(best_guess.unsqueeze(0).shape)
         outputs = torch.cat((outputs, outputs_1), dim=1)
 
         if best_guess == 2:

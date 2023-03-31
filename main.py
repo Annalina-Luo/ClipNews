@@ -1,4 +1,5 @@
 import time
+import json
 import argparse
 import torch
 import torch.nn as nn
@@ -81,13 +82,19 @@ def main(args):
         checkpoint = torch.load(args.checkpoint)
         start_epoch = checkpoint['epoch'] + 1
         epochs_since_improvement = checkpoint['epochs_since_improvement']
-        model = checkpoint['decoder']
+        ImageEncoder = checkpoint['ImageEncoder']
+        enc_text = checkpoint['enc_text']
+        dec = checkpoint['dec']
+        model = checkpoint['model']
         optimizer = optim.Adam(model.parameters(), lr=args.decoder_lr)
         encoder_optimizer = checkpoint['encoder_optimizer']
         if encoder_optimizer is None:
             encoder_optimizer = torch.optim.Adam(params=filter(lambda p: p.requires_grad, ImageEncoder.parameters()),
                                                  lr=args.encoder_lr)
 
+    enc_text = enc_text.to(device)
+    dec = dec.to(device)
+    ImageEncoder = ImageEncoder.to(device)
     model = model.to(device)
 
     train_log_dir = os.path.join(args.model_path, 'train')
@@ -149,7 +156,7 @@ def main(args):
             is_best = 1
 
         save_checkpoint(args.data_name, epoch, args.epochs_since_improvement,
-                        model, encoder_optimizer, optimizer, recent_cider, is_best)
+                        ImageEncoder, enc_text, dec, model, encoder_optimizer, optimizer, recent_cider, is_best)
 
 
 def train(model, train_loader, encoder_optimizer, optimizer, criterion, epoch, logger, logging=True):
@@ -221,11 +228,6 @@ def validate(model, val_loader, criterion, epoch, logger, logging=True):
     # Batches
     t = tqdm(val_loader, desc='Dev %d' % epoch)
     for i, (imgs, caps_ids, caps_mask, caps_emb, caplens, img_ids, arts_ids, arts_mask, arts_emb, artslens) in enumerate(t):
-        print("imgs", imgs.shape)
-        print("caps_mask", caps_mask.shape)
-        print("arts_mask", arts_mask.shape)
-        print("caps_emb", caps_emb.shape)
-        print("arts_emb", arts_emb.shape)
         imgs = imgs.to(device)
         caps_ids = caps_ids.to(device)
         caps_mask = caps_mask.to(device)
@@ -234,10 +236,8 @@ def validate(model, val_loader, criterion, epoch, logger, logging=True):
         arts_mask = arts_mask.to(device)
         arts_emb = arts_emb.to(device)
 
-        print("\n start validation")
         output = model(arts_ids, arts_mask, arts_emb,
                        caps_mask, caps_emb, imgs)
-        print("finish validation")
         output_dim = output.shape[-1]
         output = output.contiguous().view(-1, output_dim)
         caps_ids = caps_ids.contiguous().view(-1).long()
@@ -248,15 +248,16 @@ def validate(model, val_loader, criterion, epoch, logger, logging=True):
         batch_time.update(time.time() - start)
 
         start = time.time()
-        print("start bleu")
         outputs = bleu(model, arts_ids, arts_mask,
                        arts_emb, caplens, imgs, device)
-        print(outputs)
 
         preds = outputs
 
         for idx, image_id in enumerate(img_ids):
             res.append({'image_id': image_id, 'caption': " ".join(preds)})
+
+    with open(f"./{epoch}_val.json", "w") as f:
+        json.dump(res, f)
 
     print('Epoch [{}/{}], Loss: {:.4f}, Perplexity: {:5.4f}'.format(epoch,
           args.epochs, losses.avg, np.exp(losses.avg)))

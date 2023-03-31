@@ -61,14 +61,14 @@ def clip_gradient(optimizer, grad_clip):
                 param.grad.data.clamp_(-grad_clip, grad_clip)
 
 
-def save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder, encoder_optimizer, decoder_optimizer, bleu4, is_best=False):
+def save_checkpoint(data_name, epoch, epochs_since_improvement, ImageEncoder, enc_text, dec, model, encoder_optimizer, decoder_optimizer, recent_cider, is_best=False):
     """
     Saves model checkpoint.
     :param data_name: base name of processed dataset
     :param epoch: epoch number
     :param epochs_since_improvement: number of epochs since last improvement in BLEU-4 score
-    :param encoder: encoder model
-    :param decoder: decoder model
+    :param ImageEncoder: ImageEncoder model
+    :param model: Transformer model
     :param encoder_optimizer: optimizer to update encoder's weights, if fine-tuning
     :param decoder_optimizer: optimizer to update decoder's weights
     :param bleu4: validation BLEU-4 score for this epoch
@@ -76,9 +76,11 @@ def save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder
     """
     state = {'epoch': epoch,
              'epochs_since_improvement': epochs_since_improvement,
-             'bleu-4': bleu4,
-             'encoder': encoder,
-             'decoder': decoder,
+             'cider': recent_cider,
+             'ImageEncoder': ImageEncoder,
+             'enc_text': enc_text,
+             'dec': dec,
+             'model': model,
              'encoder_optimizer': encoder_optimizer,
              'decoder_optimizer': decoder_optimizer
              }
@@ -144,65 +146,65 @@ class Logger(object):
 
     def __init__(self, log_dir):
         """Create a summary writer logging to log_dir."""
-        self.writer = tf.summary.FileWriter(log_dir)
+        # self.writer = tf.summary.FileWriter(log_dir)
+        self.writer = tf.summary.create_file_writer(log_dir)
 
     def scalar_summary(self, tag, value, step):
         """Log a scalar variable."""
-        summary = tf.Summary(
-            value=[tf.Summary.Value(tag=tag, simple_value=value)])
-        self.writer.add_summary(summary, step)
-        # with self.writer.as_default():
-        #     tf.summary.scalar('summary', summary, step=step)
-        #     self.writer.flush()
+        # summary = tf.Summary(
+        #     value=[tf.Summary.Value(tag=tag, simple_value=value)])
+        # self.writer.add_summary(summary, step)
+        with self.writer.as_default():
+            tf.summary.scalar(tag, value, step=step)
+            self.writer.flush()
 
-    def image_summary(self, tag, images, step):
-        """Log a list of images."""
+    # def image_summary(self, tag, images, step):
+    #     """Log a list of images."""
+    #     img_summaries = []
+    #     for i, img in enumerate(images):
+    #         # Write the image to a string
+    #         try:
+    #             s = StringIO()
+    #         except:
+    #             s = BytesIO()
+    #         scipy.misc.toimage(img).save(s, format="png")
 
-        img_summaries = []
-        for i, img in enumerate(images):
-            # Write the image to a string
-            try:
-                s = StringIO()
-            except:
-                s = BytesIO()
-            scipy.misc.toimage(img).save(s, format="png")
+    #         # Create an Image object
+    #         img_sum = tf.Summary.Image(encoded_image_string=s.getvalue(),
+    #                                    height=img.shape[0],
+    #                                    width=img.shape[1])
+    #         # Create a Summary value
+    #         img_summaries.append(tf.Summary.Value(
+    #             tag='%s/%d' % (tag, i), image=img_sum))
 
-            # Create an Image object
-            img_sum = tf.Summary.Image(encoded_image_string=s.getvalue(),
-                                       height=img.shape[0],
-                                       width=img.shape[1])
-            # Create a Summary value
-            img_summaries.append(tf.Summary.Value(
-                tag='%s/%d' % (tag, i), image=img_sum))
+    #     # Create and write Summary
+    #     summary = tf.Summary(value=img_summaries)
+    #     self.writer.add_summary(summary, step)
 
-        # Create and write Summary
-        summary = tf.Summary(value=img_summaries)
-        self.writer.add_summary(summary, step)
+    # def histo_summary(self, tag, values, step, bins=1000):
+    #     """Log a histogram of the tensor of values."""
 
-    def histo_summary(self, tag, values, step, bins=1000):
-        """Log a histogram of the tensor of values."""
+    #     # Create a histogram using numpy
+    #     counts, bin_edges = np.histogram(values, bins=bins)
 
-        # Create a histogram using numpy
-        counts, bin_edges = np.histogram(values, bins=bins)
+    #     # Fill the fields of the histogram proto
+    #     hist = tf.HistogramProto()
+    #     hist.min = float(np.min(values))
+    #     hist.max = float(np.max(values))
+    #     hist.num = int(np.prod(values.shape))
+    #     hist.sum = float(np.sum(values))
+    #     hist.sum_squares = float(np.sum(values**2))
 
-        # Fill the fields of the histogram proto
-        hist = tf.HistogramProto()
-        hist.min = float(np.min(values))
-        hist.max = float(np.max(values))
-        hist.num = int(np.prod(values.shape))
-        hist.sum = float(np.sum(values))
-        hist.sum_squares = float(np.sum(values**2))
+    #     # Drop the start of the first bin
+    #     bin_edges = bin_edges[1:]
 
-        # Drop the start of the first bin
-        bin_edges = bin_edges[1:]
+    #     # Add bin edges and counts
+    #     for edge in bin_edges:
+    #         hist.bucket_limit.append(edge)
+    #     for c in counts:
+    #         hist.bucket.append(c)
 
-        # Add bin edges and counts
-        for edge in bin_edges:
-            hist.bucket_limit.append(edge)
-        for c in counts:
-            hist.bucket.append(c)
-
-        # Create and write Summary
-        summary = tf.Summary(value=[tf.Summary.Value(tag=tag, histo=hist)])
-        self.writer.add_summary(summary, step)
-        self.writer.flush()
+    #     # Create and write Summary
+    #     summary = tf.Summary(value=[tf.Summary.Value(tag=tag, histo=hist)])
+    #     self.writer.add_summary(summary, step)
+    #     self.writer.flush()
