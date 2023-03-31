@@ -31,6 +31,7 @@ class CLIP_encoder(nn.Module):
 
     def forward(self, imgs):
         out = clip_model.encode_image(imgs)  # [batch_size, 512]
+        out = torch.tensor(out, dtype=torch.float32)
         out = self.l1(out)
 
         return out
