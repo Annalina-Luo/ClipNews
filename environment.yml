@@ -4,7 +4,7 @@ channels:
   - defaults
   - conda-forge
 dependencies:
-  - python=3.6
+  - python=3.7
   - autopep8=1.4.4
   - cudatoolkit=9.2
   - cython=0.29.15
@@ -42,4 +42,3 @@ dependencies:
       - termcolor==1.1.0
       - tqdm==4.43.0
       - transformers==2.5.1
-      - git+git://github.com/salaniz/pycocoevalcap.git@a6b79b0fbd0f4f293634831e4e09405de2abc955
