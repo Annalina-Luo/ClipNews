@@ -267,6 +267,7 @@ class Decoder(nn.Module):
         # trg = [batch size, trg len, hid dim]
         # attention = [batch size, n heads, trg len, src len]
         output = self.fc_out(trg)
+        output=torch.softmax(output, dim=-1)
         # output = [batch size, trg len, output dim]
 
         attention_src = torch.mean(attention_src, dim=1)
@@ -282,6 +283,7 @@ class Decoder(nn.Module):
         p = torch.sigmoid(
             self.l1(torch.cat([trg1, trg_src, trg_image], dim=2)))
         output = (1 - p) * output + p * attn_value
+        output=torch.softmax(output, dim=-1)
 
         return output
 
