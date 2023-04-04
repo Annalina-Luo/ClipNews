@@ -66,16 +66,20 @@ def collate_fn(data):
             - caption_mask: (len)
             - caption_embedding:
             - caption: torch tensor of shape (?); variable length.
+            - article_ids
+            - article_mask
+            - article_embedding
     Returns:
         images: torch tensor of shape (batch_size, 3, 224, 224).
         target_ids: torch tensor of shape (batch_size, padded_length)
         target_mask: torch tensor of shape (batch_size, padded_length) 
         target_embedding, 
         lengths: list; valid length for each padded caption.
-        # ids: tuple 
-        targets1
-        targets: torch tensor of shape (batch_size, padded_length).
-        lengths: list; valid length for each padded caption.
+        # ids: tupl
+        target1_ids
+        target1_mask
+        target1_embedding
+        lengths1: list; valid length for each article.
     """
     # Sort a data list by caption length (descending order).
     data.sort(key=lambda x: len(x[1]), reverse=True)
