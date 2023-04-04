@@ -17,7 +17,8 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 parser = argparse.ArgumentParser()
 
-parser.add_argument('--data_name', type=str, default='ClipNews_GoodNews')
+parser.add_argument('--data_name', type=str,
+                    default='ClipNews_GoodNews', help="the name of the dataset.")
 parser.add_argument('--model_path', type=str,
                     default='.\\model_save\\', help='path for saving trained models')
 parser.add_argument('--image_dir', type=str,
@@ -34,9 +35,11 @@ parser.add_argument('--gts_file_dev', type=str, default='./val_gts.json')
 parser.add_argument('--embed_dim', type=int, default=768,
                     help='dimension of word embedding vectors')
 parser.add_argument('--dropout', type=float, default=0.3)
-parser.add_argument('--start_epoch', type=int, default=0)
+parser.add_argument('--start_epoch', type=int, default=0,
+                    help="the starting epoch.")
 parser.add_argument('--epochs', type=int, default=150)
-parser.add_argument('--epochs_since_improvement', type=int, default=0)
+parser.add_argument('--epochs_since_improvement', type=int, default=0,
+                    help="the number of epochs since the last improvement in validation loss.")
 parser.add_argument('--batch_size', type=int, default=128)
 parser.add_argument('--num_workers', type=int, default=6)
 parser.add_argument('--encoder_lr', type=float, default=0.0005)
@@ -45,32 +48,42 @@ parser.add_argument('--checkpoint', type=str, default=None,
                     help='path for checkpoints')
 parser.add_argument('--grad_clip', type=float, default=5.)
 parser.add_argument('--alpha_c', type=float, default=1.)
-parser.add_argument('--best_cider', type=float, default=0.)
+parser.add_argument('--best_cider', type=float, default=0.,
+                    help=" the best CIDEr score achieved during training.")
+parser.add_argument('--ImageEncoder_attention', type=bool, default=False,
+                    help="whether add attention module in the image encoder")
+parser.add_argument('--TextEncoder_attention', type=bool, default=False,
+                    help="whether add attention module in the article encoder")
 
 
 args = parser.parse_args()
 
 
 def get_parameter_number(net):
+    # returns the total number of parameters and trainable parameters in the model.
     total_num = sum(p.numel() for p in net.parameters())
     trainable_num = sum(p.numel() for p in net.parameters() if p.requires_grad)
     return {'Total': total_num, 'Trainable': trainable_num}
 
 
 def main(args):
-
+    # Initializing global variables
     global best_cider, epochs_since_improvement, checkpoint, start_epoch, data_name, train_logger, dev_logger
 
     if args.checkpoint is None:
-        enc_text = Encoder_text(args.embed_dim, 1, 8, 512, 0.1)
+        enc_text = Encoder_text(args.embed_dim, 1, 8,
+                                512, 0.1, args.TextEncoder_attention)
         dec = Decoder(args.embed_dim, 2, 8, 512, 0.1)
-        ImageEncoder = CLIP_encoder(args.embed_dim)
+        ImageEncoder = CLIP_encoder(
+            args.embed_dim, 1, 8, 512, 0.1, args.ImageEncoder_attention)
         model = NewsTransformer(enc_text, ImageEncoder,
                                 dec, args.embed_dim, 0, 0)
+
         optimizer = optim.Adam(model.parameters(), lr=args.decoder_lr)
         encoder_optimizer = torch.optim.Adam(params=filter(lambda p: p.requires_grad, ImageEncoder.parameters()),
                                              lr=args.encoder_lr)
 
+        # Initializing model weights
         def initialize_weights(m):
             if hasattr(m, 'weight') and m.weight.dim() > 1:
                 nn.init.xavier_uniform_(m.weight.data)
@@ -79,6 +92,7 @@ def main(args):
         start_epoch = args.start_epoch
 
     else:
+        # Loading model from checkpoint
         checkpoint = torch.load(args.checkpoint)
         start_epoch = checkpoint['epoch'] + 1
         epochs_since_improvement = checkpoint['epochs_since_improvement']
@@ -91,38 +105,44 @@ def main(args):
         if encoder_optimizer is None:
             encoder_optimizer = torch.optim.Adam(params=filter(lambda p: p.requires_grad, ImageEncoder.parameters()),
                                                  lr=args.encoder_lr)
-
+    # Moving model to GPU
     enc_text = enc_text.to(device)
     dec = dec.to(device)
     ImageEncoder = ImageEncoder.to(device)
     model = model.to(device)
 
+    # Initializing loggers
     train_log_dir = os.path.join(args.model_path, 'train')
     dev_log_dir = os.path.join(args.model_path, 'dev')
     train_logger = Logger(train_log_dir)
     dev_logger = Logger(dev_log_dir)
 
+    # Defining loss function
     criterion = nn.CrossEntropyLoss().to(device)
 
-    train_ann_path = os.path.join(args.ann_path, 'train.json')
+    # Creating dataloaders
+    train_ann_path = os.path.join(args.ann_path, 'train_s.json')
     train_data = NewsDataset(args.image_dir, train_ann_path)
-    print('train set size: {}'.format(len(train_data)))
+    # print('train set size: {}'.format(len(train_data)))
     train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True,
                                                num_workers=args.num_workers, collate_fn=collate_fn)
 
     dev_ann_path = os.path.join(args.ann_path, 'val.json')
     dev_data = NewsDataset(args.image_dir, dev_ann_path)
-    print('dev set size: {}'.format(len(dev_data)))
+    # print('dev set size: {}'.format(len(dev_data)))
     val_loader = torch.utils.data.DataLoader(dataset=dev_data, batch_size=1, shuffle=False,
                                              num_workers=args.num_workers, collate_fn=collate_fn)
 
+    # Initializing best cider score
     best_cider = args.best_cider
+    # Start training
     for epoch in range(start_epoch, args.epochs):
         if args.epochs_since_improvement == 20:
             break
         if args.epochs_since_improvement > 0 and args.epochs_since_improvement % 6 == 0:
             adjust_learning_rate(optimizer, 0.6)
 
+        # Training model
         train(model=model,
               train_loader=train_loader,
               criterion=criterion,
@@ -132,6 +152,7 @@ def main(args):
               logger=train_logger,
               logging=True)
 
+        # Validating model
         if epoch > 4:
             recent_cider = validate(model=model,
                                     val_loader=val_loader,
@@ -176,8 +197,10 @@ def train(model, train_loader, encoder_optimizer, optimizer, criterion, epoch, l
         # arts_mask [batch_size, art_len]
         # arts_emb [batch_size, art_len, 768]
 
+        # measure the time it takes to load the data
         data_time.update(time.time() - start)
 
+        # move the tensors to the specified device (CPU or GPU)
         imgs = imgs.to(device)
         caps_ids = caps_ids.to(device)
         caps_mask = caps_mask.to(device)
@@ -187,24 +210,25 @@ def train(model, train_loader, encoder_optimizer, optimizer, criterion, epoch, l
         arts_emb = arts_emb.to(device)
 
         output = model(arts_ids, arts_mask, arts_emb,
-                       caps_mask, caps_emb, imgs)
+                       caps_mask, caps_emb, imgs)  # compute the output of the model
 
         output_dim = output.shape[-1]
         output = output.contiguous().view(-1, output_dim)
         caps_ids = caps_ids.contiguous().view(-1).long()  # torch.Size([2944])
 
-        loss = criterion(output, caps_ids)
+        loss = criterion(output, caps_ids)  # compute the loss
 
         optimizer.zero_grad()
         if encoder_optimizer is not None:
             encoder_optimizer.zero_grad()
 
         decode_lengths = [c - 2 for c in caplens]
+        # update the losses meter
         losses.update(loss.item(), sum(decode_lengths))
 
-        loss.backward()
+        loss.backward()  # backpropagate the gradients
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
-        optimizer.step()
+        optimizer.step()  # update the model parameters
         batch_time.update(time.time() - start)
 
         start = time.time()
@@ -222,12 +246,14 @@ def validate(model, val_loader, criterion, epoch, logger, logging=True):
 
     batch_time = AverageMeter()
     losses = AverageMeter()
-    res = []
+    res = []  # Initialize an empty list to store the results
     start = time.time()
 
     # Batches
     t = tqdm(val_loader, desc='Dev %d' % epoch)
     for i, (imgs, caps_ids, caps_mask, caps_emb, caplens, img_ids, arts_ids, arts_mask, arts_emb, artslens) in enumerate(t):
+
+        # Move the inputs to the device
         imgs = imgs.to(device)
         caps_ids = caps_ids.to(device)
         caps_mask = caps_mask.to(device)
@@ -236,6 +262,7 @@ def validate(model, val_loader, criterion, epoch, logger, logging=True):
         arts_mask = arts_mask.to(device)
         arts_emb = arts_emb.to(device)
 
+        # Compute the model's output and loss
         output = model(arts_ids, arts_mask, arts_emb,
                        caps_mask, caps_emb, imgs)
         output_dim = output.shape[-1]
@@ -243,30 +270,35 @@ def validate(model, val_loader, criterion, epoch, logger, logging=True):
         caps_ids = caps_ids.contiguous().view(-1).long()
         loss = criterion(output, caps_ids)
 
+        # Compute the decode lengths and update the loss and batch time
         decode_lengths = [c - 2 for c in caplens]
         losses.update(loss.item(), sum(decode_lengths))
         batch_time.update(time.time() - start)
 
         start = time.time()
+        # Compute the predictions for the inputs
         outputs = bleu(model, arts_ids, arts_mask,
                        arts_emb, caplens, imgs, device)
 
         preds = outputs
 
+        # Append the results to the res list
         for idx, image_id in enumerate(img_ids):
             res.append({'image_id': image_id, 'caption': " ".join(preds)})
 
-    with open(f"./{epoch}_val.json", "w") as f:
+    # Save the results as a json file
+    with open(f"./val_{epoch}.json", "w") as f:
         json.dump(res, f)
 
     print('Epoch [{}/{}], Loss: {:.4f}, Perplexity: {:5.4f}'.format(epoch,
           args.epochs, losses.avg, np.exp(losses.avg)))
 
+    # Compute the CIDEr score and log it into the logger
     score = ciderScore(args.gts_file_dev, res)
 
     if logging:
         logger.scalar_summary(score, "Cider", epoch)
-    # log into tf series
+    # # Log the loss and perplexity into the logger
     if logging:
         logger.scalar_summary('loss', losses.avg, epoch)
         logger.scalar_summary('Perplexity', np.exp(losses.avg), epoch)
