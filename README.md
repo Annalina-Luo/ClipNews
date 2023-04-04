@@ -1,5 +1,5 @@
-![Python 3.6](https://img.shields.io/badge/python-3.9-green.svg)
-![Packagist](https://img.shields.io/badge/Pytorch-2.0.0-red.svg)
+![Python 3.9](https://img.shields.io/badge/python-3.9-green.svg)
+![Pytorch](https://img.shields.io/badge/Pytorch-2.0.0-red.svg)
 
 # NewsClip
 
