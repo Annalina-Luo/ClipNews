@@ -579,7 +579,7 @@ def bleu(model, src, src_mask, src_emb, caplens, imgs, device):
 
 
 def ciderScore(gts_file, res):
-    gts = json.dump(open(gts_file, 'r'))
+    gts = json.load(open(gts_file, 'r'))
     gts_dic = {}
     res_dic = {}
     for i in gts:
