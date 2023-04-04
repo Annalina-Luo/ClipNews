@@ -1,5 +1,4 @@
-![Python 3.9](https://img.shields.io/badge/python-3.9-green.svg)
-![Pytorch](https://img.shields.io/badge/Pytorch-2.0.0-red.svg)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Annalina-Luo/NewsClip/blob/main/NewsClip.ipynb)
 
 # NewsClip
 
