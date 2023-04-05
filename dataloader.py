@@ -12,15 +12,15 @@ from transformers import RobertaTokenizer, RobertaModel
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 text_tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
 text_model = RobertaModel.from_pretrained('roberta-base')
-clip_model, preprocess = clip.load("ViT-B/32", device=device, jit=False)
 
 
 class NewsDataset(data.Dataset):
 
-    def __init__(self, image_dir, ann_path):
+    def __init__(self, image_dir, ann_path, preprocess):
 
         self.image_dir = image_dir
         self.ann = json.load(open(ann_path, 'r'))
+        self.preprocess = preprocess
 
     def __getitem__(self, index):
         # Image
@@ -28,7 +28,7 @@ class NewsDataset(data.Dataset):
             self.image_dir, self.ann[index]['image_path'])
         image = io.imread(image_path)
         pil_image = Image.fromarray(image)
-        image_input = preprocess(pil_image)
+        image_input = self.preprocess(pil_image)
         # image_input [3, 224, 224]
 
         # Caption

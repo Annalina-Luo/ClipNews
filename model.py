@@ -13,8 +13,6 @@ logging.set_verbosity_error()
 
 # device (GPU or CPU)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# load the CLIP model and preprocessing steps using ViT-B/32 architecture
-clip_model, preprocess = clip.load("ViT-B/32", device=device, jit=False)
 # load the RobertaTokenizer and RobertaModel
 text_tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
 text_model = RobertaModel.from_pretrained('roberta-base')
@@ -165,7 +163,7 @@ class CLIP_encoder(nn.Module):
                  n_layers,
                  n_heads,
                  pf_dim,
-                 dropout,
+                 dropout, clip_model,
                  is_attention) -> None:
         super().__init__()
         """
@@ -176,6 +174,7 @@ class CLIP_encoder(nn.Module):
         dropout: default 0.1
         is_attention: whether add the AoA module
         """
+        self.clip_model = clip_model
         self.layers = nn.ModuleList([ImageLayer(hid_dim,
                                                 n_heads,
                                                 pf_dim,
@@ -188,7 +187,7 @@ class CLIP_encoder(nn.Module):
 
     def forward(self, imgs):
         # encode the image using the CLIP model
-        out = clip_model.encode_image(imgs).to(
+        out = self.clip_model.encode_image(imgs).to(
             device, dtype=torch.float32)  # [batch_size, 512]
         out = self.l1(out)
 
