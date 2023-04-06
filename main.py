@@ -25,7 +25,7 @@ parser.add_argument('--data_name', type=str,
 parser.add_argument('--model_path', type=str,
                     default='.\\model_save\\', help='path for saving trained models')
 parser.add_argument('--image_dir', type=str,
-                    default='./images_processed/', help='directory for resized images')
+                    default='F:/NLP/transform-and-tell/data/goodnews/goodnews/images_processed/', help='directory for resized images')
 parser.add_argument('--ann_path', type=str, default='./',
                     help='path for annotation json file')
 parser.add_argument('--log_step', type=int, default=100,
@@ -100,6 +100,8 @@ def main(args):
         start_epoch = checkpoint['epoch'] + 1
         epochs_since_improvement = checkpoint['epochs_since_improvement']
         ImageEncoder = checkpoint['ImageEncoder']
+        enc_text = checkpoint['enc_text']
+        dec = checkpoint['dec']
         model = checkpoint['model']
         best_cider = checkpoint['cider']
         optimizer = optim.Adam(model.parameters(), lr=args.decoder_lr)
@@ -109,6 +111,8 @@ def main(args):
                                                  lr=args.encoder_lr)
     # Moving model to GPU
     ImageEncoder = ImageEncoder.to(device)
+    enc_text = enc_text.to(device)
+    dec = dec.to(device)
     model = model.to(device)
 
     # Defining loss function
@@ -167,7 +171,7 @@ def main(args):
             is_best = 1
 
         save_checkpoint(args.data_name, epoch, args.epochs_since_improvement,
-                        ImageEncoder, model, encoder_optimizer, optimizer, recent_cider, is_best)
+                        ImageEncoder, enc_text, dec, model, encoder_optimizer, optimizer, recent_cider, is_best)
 
 
 def train(model, train_loader, encoder_optimizer, optimizer, criterion, epoch):
