@@ -17,6 +17,7 @@ import clip
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 clip_model, preprocess = clip.load("ViT-B/32", device=device, jit=False)
+clip_model.to(device)
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--data_name', type=str,
@@ -24,14 +25,14 @@ parser.add_argument('--data_name', type=str,
 parser.add_argument('--model_path', type=str,
                     default='.\\model_save\\', help='path for saving trained models')
 parser.add_argument('--image_dir', type=str,
-                    default='./images_processed/', help='directory for resized images')
+                    default='F:/NLP/transform-and-tell/data/goodnews/goodnews/images_processed/', help='directory for resized images')
 parser.add_argument('--ann_path', type=str, default='./',
                     help='path for annotation json file')
 parser.add_argument('--log_step', type=int, default=100,
                     help='step size for prining log info')
 parser.add_argument('--save_step', type=int, default=1000,
                     help='step size for saving trained models')
-parser.add_argument('--gts_file_dev', type=str, default='./val_gts.json')
+parser.add_argument('--gts_file_dev', type=str, default='./val_gts_2.json')
 
 # Model parameters
 parser.add_argument('--embed_dim', type=int, default=768,
@@ -70,7 +71,7 @@ def get_parameter_number(net):
 
 def main(args):
     # Initializing global variables
-    global best_cider, epochs_since_improvement, checkpoint, start_epoch, data_name, train_logger, dev_logger
+    global best_cider, epochs_since_improvement, checkpoint, start_epoch, data_name
 
     if args.checkpoint is None:
         enc_text = Encoder_text(args.embed_dim, 1, 8,
@@ -99,25 +100,16 @@ def main(args):
         start_epoch = checkpoint['epoch'] + 1
         epochs_since_improvement = checkpoint['epochs_since_improvement']
         ImageEncoder = checkpoint['ImageEncoder']
-        enc_text = checkpoint['enc_text']
-        dec = checkpoint['dec']
         model = checkpoint['model']
+        best_cider = checkpoint['cider']
         optimizer = optim.Adam(model.parameters(), lr=args.decoder_lr)
         encoder_optimizer = checkpoint['encoder_optimizer']
         if encoder_optimizer is None:
             encoder_optimizer = torch.optim.Adam(params=filter(lambda p: p.requires_grad, ImageEncoder.parameters()),
                                                  lr=args.encoder_lr)
     # Moving model to GPU
-    enc_text = enc_text.to(device)
-    dec = dec.to(device)
     ImageEncoder = ImageEncoder.to(device)
     model = model.to(device)
-
-    # Initializing loggers
-    train_log_dir = os.path.join(args.model_path, 'train')
-    dev_log_dir = os.path.join(args.model_path, 'dev')
-    train_logger = Logger(train_log_dir)
-    dev_logger = Logger(dev_log_dir)
 
     # Defining loss function
     criterion = nn.CrossEntropyLoss().to(device)
@@ -129,7 +121,7 @@ def main(args):
     train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True,
                                                num_workers=args.num_workers, collate_fn=collate_fn)
 
-    dev_ann_path = os.path.join(args.ann_path, 'val.json')
+    dev_ann_path = os.path.join(args.ann_path, 'test_2.json')
     dev_data = NewsDataset(args.image_dir, dev_ann_path, preprocess)
     # print('dev set size: {}'.format(len(dev_data)))
     val_loader = torch.utils.data.DataLoader(dataset=dev_data, batch_size=1, shuffle=False,
@@ -150,18 +142,14 @@ def main(args):
               criterion=criterion,
               encoder_optimizer=encoder_optimizer,
               optimizer=optimizer,
-              epoch=epoch,
-              logger=train_logger,
-              logging=True)
+              epoch=epoch)
 
         # Validating model
-        if epoch > 4:
+        if epoch > 0:
             recent_cider = validate(model=model,
                                     val_loader=val_loader,
                                     criterion=criterion,
-                                    epoch=epoch,
-                                    logger=dev_logger,
-                                    logging=True)
+                                    epoch=epoch)
 
             is_best = recent_cider > best_cider
             best_cider = max(recent_cider, best_cider)
@@ -179,10 +167,10 @@ def main(args):
             is_best = 1
 
         save_checkpoint(args.data_name, epoch, args.epochs_since_improvement,
-                        ImageEncoder, enc_text, dec, model, encoder_optimizer, optimizer, recent_cider, is_best)
+                        ImageEncoder, model, encoder_optimizer, optimizer, recent_cider, is_best)
 
 
-def train(model, train_loader, encoder_optimizer, optimizer, criterion, epoch, logger, logging=True):
+def train(model, train_loader, encoder_optimizer, optimizer, criterion, epoch):
     model.train()
     batch_time = AverageMeter()
     data_time = AverageMeter()
@@ -238,12 +226,12 @@ def train(model, train_loader, encoder_optimizer, optimizer, criterion, epoch, l
     # log into tf series
     print('Epoch [{}/{}], Loss: {:.4f}, Perplexity: {:5.4f}'.format(epoch,
           args.epochs, losses.avg, np.exp(losses.avg)))
-    if logging:
-        logger.scalar_summary('loss', losses.avg, epoch)
-        logger.scalar_summary('Perplexity', np.exp(losses.avg), epoch)
+    # if logging:
+    #     logger.scalar_summary('loss', losses.avg, epoch)
+    #     logger.scalar_summary('Perplexity', np.exp(losses.avg), epoch)
 
 
-def validate(model, val_loader, criterion, epoch, logger, logging=True):
+def validate(model, val_loader, criterion, epoch):
     model.eval()  # eval mode (no dropout or batchnorm)
 
     batch_time = AverageMeter()
@@ -298,12 +286,12 @@ def validate(model, val_loader, criterion, epoch, logger, logging=True):
     # Compute the CIDEr score and log it into the logger
     score = ciderScore(args.gts_file_dev, res)
 
-    if logging:
-        logger.scalar_summary(score, "Cider", epoch)
-    # # Log the loss and perplexity into the logger
-    if logging:
-        logger.scalar_summary('loss', losses.avg, epoch)
-        logger.scalar_summary('Perplexity', np.exp(losses.avg), epoch)
+    # if logging:
+    #     logger.scalar_summary(score, "Cider", epoch)
+    # # # Log the loss and perplexity into the logger
+    # if logging:
+    #     logger.scalar_summary('loss', losses.avg, epoch)
+    #     logger.scalar_summary('Perplexity', np.exp(losses.avg), epoch)
     return score
 
 

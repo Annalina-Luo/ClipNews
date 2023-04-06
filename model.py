@@ -6,7 +6,7 @@ from torch.autograd import Variable
 from torch.autograd import Variable
 from cider.cider import Cider
 import json
-import clip
+# import clip
 from transformers import RobertaTokenizer, RobertaModel
 from transformers import logging
 logging.set_verbosity_error()
@@ -187,8 +187,10 @@ class CLIP_encoder(nn.Module):
 
     def forward(self, imgs):
         # encode the image using the CLIP model
-        out = self.clip_model.encode_image(imgs).to(
-            device, dtype=torch.float32)  # [batch_size, 512]
+        # out = self.clip_model.encode_image(imgs).to(
+        #     device, dtype=torch.float32)  # [batch_size, 512]
+        out = self.clip_model.encode_image(imgs)
+        out = torch.tensor(out, dtype=torch.float32)
         out = self.l1(out)
 
         if self.is_attention:
@@ -377,7 +379,7 @@ class Decoder(nn.Module):
         # attention = [batch size, n heads, trg len, src len]
         # Compute the output probability distribution over the vocabulary using a linear layer
         output = self.fc_out(trg)
-        output = torch.softmax(output, dim=-1)
+        # output = torch.softmax(output, dim=-1)
         # output = [batch size, trg len, output dim]
 
         # Compute the average of the attention over the source sequence
@@ -399,7 +401,7 @@ class Decoder(nn.Module):
         p = torch.sigmoid(
             self.l1(torch.cat([trg1, trg_src, trg_image], dim=2)))
         output = (1 - p) * output + p * attn_value
-        output = torch.softmax(output, dim=-1)
+        # output = torch.softmax(output, dim=-1)
 
         return output
 
@@ -546,7 +548,7 @@ def translate_sentence(model, src, src_mask, src_emb, caplens, imgs, device):
         # Create mask for current target input
         trg_pad_mask = (mask != 0).unsqueeze(
             1).unsqueeze(2).to(device)
-        trg_len = mask.shape[1].to(device)
+        trg_len = mask.shape[1]
         trg_sub_mask = torch.tril(torch.ones(
             (trg_len, trg_len), device=device)).bool().to(device)
         trg_mask = trg_pad_mask & trg_sub_mask
