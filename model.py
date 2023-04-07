@@ -531,6 +531,7 @@ def translate_sentence(model, src, src_mask, src_emb, caplens, imgs, device):
 
     # Add mask for source input
     src_mask = src_mask.unsqueeze(1).unsqueeze(2)
+    # [batch size, 1, 1, src len]
 
     with torch.no_grad():
         # Encode the source article
@@ -541,28 +542,35 @@ def translate_sentence(model, src, src_mask, src_emb, caplens, imgs, device):
     outputs = text_model.get_input_embeddings().weight[0].to(device)
     outputs = outputs.unsqueeze(0).unsqueeze(1).to(device)
     results = torch.zeros([1]).to(device)
-    mask = torch.ones([1, 1]).to(device)
 
     # Generate the caption one token at a time
     for i in range(max_length):
+        # mask = torch.ones([i+1, i+1]).to(device)
         # Create mask for current target input
-        trg_pad_mask = (mask != 0).unsqueeze(
+        print("results", results.unsqueeze(0).shape)
+        trg_pad_mask = (results.unsqueeze(0) != 0).unsqueeze(
             1).unsqueeze(2).to(device)
-        trg_len = mask.shape[1]
+        trg_len = results.shape[1]
         trg_sub_mask = torch.tril(torch.ones(
-            (trg_len, trg_len), device=device)).bool().to(device)
+            (trg_len, trg_len), device=device)).bool()
         trg_mask = trg_pad_mask & trg_sub_mask
+        print("trg_pad_mask", trg_pad_mask.shape)
+        # trg_mask = [batch size, 1, trg len, trg len]
 
         with torch.no_grad():
             # Generate next token in the sequence
             output = model.decoder(
                 outputs, trg_mask, enc_image, enc_src, src_emb, src_mask, src)
+            # [batch_size, trg_len, src_len]
 
         best_guess = output.argmax(2)[:, -1]
+        print("best_guess", i, best_guess)
         results = torch.cat((results, best_guess), dim=0)
+        # print("results_2", results)
         outputs_1 = text_model.get_input_embeddings(
         ).weight[best_guess.unsqueeze(0)]
         outputs = torch.cat((outputs, outputs_1), dim=1)
+        print("outputs_2", outputs.shape)
 
         if best_guess == 2:
             break

@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 # import tensorflow as tf
-import scipy.misc
+# import scipy.misc
 
 
 def init_embedding(embeddings):
@@ -61,7 +61,7 @@ def clip_gradient(optimizer, grad_clip):
                 param.grad.data.clamp_(-grad_clip, grad_clip)
 
 
-def save_checkpoint(data_name, epoch, epochs_since_improvement, ImageEncoder, model, encoder_optimizer, decoder_optimizer, recent_cider, is_best=False):
+def save_checkpoint(data_name, epoch, epochs_since_improvement, ImageEncoder, enc_text, dec, model, encoder_optimizer, decoder_optimizer, recent_cider, is_best=False):
     """
     Saves model checkpoint.
     :param data_name: base name of processed dataset
@@ -78,6 +78,8 @@ def save_checkpoint(data_name, epoch, epochs_since_improvement, ImageEncoder, mo
              'epochs_since_improvement': epochs_since_improvement,
              'cider': recent_cider,
              'ImageEncoder': ImageEncoder,
+             'enc_text': enc_text,
+             'dec': dec,
              'model': model,
              'encoder_optimizer': encoder_optimizer,
              'decoder_optimizer': decoder_optimizer

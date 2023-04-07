@@ -4,7 +4,7 @@ import argparse
 import torch
 import torch.nn as nn
 from tqdm import tqdm
-from model import Encoder_text, Decoder, NewsTransformer, bleu, ciderScore, CLIP_encoder
+from model import Encoder_text, Decoder, NewsTransformer, translate_sentence, ciderScore, CLIP_encoder
 import os
 from dataloader import NewsDataset, collate_fn
 import numpy as np
@@ -32,7 +32,7 @@ parser.add_argument('--log_step', type=int, default=100,
                     help='step size for prining log info')
 parser.add_argument('--save_step', type=int, default=1000,
                     help='step size for saving trained models')
-parser.add_argument('--gts_file_dev', type=str, default='./val_gts_2.json')
+parser.add_argument('--gts_file_dev', type=str, default='./train_gts.json')
 
 # Model parameters
 parser.add_argument('--embed_dim', type=int, default=768,
@@ -125,7 +125,7 @@ def main(args):
     train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True,
                                                num_workers=args.num_workers, collate_fn=collate_fn)
 
-    dev_ann_path = os.path.join(args.ann_path, 'test_2.json')
+    dev_ann_path = os.path.join(args.ann_path, 'train_s.json')
     dev_data = NewsDataset(args.image_dir, dev_ann_path, preprocess)
     # print('dev set size: {}'.format(len(dev_data)))
     val_loader = torch.utils.data.DataLoader(dataset=dev_data, batch_size=1, shuffle=False,
@@ -149,7 +149,7 @@ def main(args):
               epoch=epoch)
 
         # Validating model
-        if epoch > 0:
+        if epoch > 5:
             recent_cider = validate(model=model,
                                     val_loader=val_loader,
                                     criterion=criterion,
@@ -185,6 +185,8 @@ def train(model, train_loader, encoder_optimizer, optimizer, criterion, epoch):
     t = tqdm(train_loader, desc='Train %d' % epoch)
 
     for i, (imgs, caps_ids, caps_mask, caps_emb, caplens, img_ids, arts_ids, arts_mask, arts_emb, artslens) in enumerate(t):
+        if i > 1:
+            exit()
         # imgs [batch_size, 3,224, 224]
         # caps_ids [batch_size, cap_len]
         # caps_emb [batch_size, cap_len, 768]
@@ -271,8 +273,11 @@ def validate(model, val_loader, criterion, epoch):
 
         start = time.time()
         # Compute the predictions for the inputs
-        outputs = bleu(model, arts_ids, arts_mask,
-                       arts_emb, caplens, imgs, device)
+        # outputs = bleu(model, arts_ids, arts_mask,
+        #                arts_emb, caplens, imgs, device)
+        prediction = translate_sentence(
+            model, arts_ids, arts_mask,
+            arts_emb, caplens, imgs, device)
 
         preds = outputs
 
