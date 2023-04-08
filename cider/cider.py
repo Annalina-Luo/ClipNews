@@ -40,13 +40,7 @@ class Cider:
             hypo = res[id]
             ref = gts[id]
 
-            # Sanity check.
-            assert (type(hypo) is list)
-            assert (len(hypo) == 1)
-            assert (type(ref) is list)
-            assert (len(ref) > 0)
-
-            cider_scorer += (hypo[0], ref)
+            cider_scorer += (hypo, ref)
 
         (score, scores) = cider_scorer.compute_score()
 
