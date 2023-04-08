@@ -249,8 +249,6 @@ def validate(model, val_loader, criterion, epoch):
     # Batches
     t = tqdm(val_loader, desc='Dev %d' % epoch)
     for i, (imgs, caps_ids, caps_mask, caps_emb, caplens, img_ids, arts_ids, arts_mask, arts_emb, artslens) in enumerate(t):
-        if i > 1:
-            exit()
         # Move the inputs to the device
         imgs = imgs.to(device)
         caps_ids = caps_ids.to(device)
@@ -282,7 +280,7 @@ def validate(model, val_loader, criterion, epoch):
             arts_emb, caplens, imgs, device)
 
         preds = prediction
-        print("preds", preds)
+        # print("preds", preds)
 
         # Append the results to the res list
         for idx, image_id in enumerate(img_ids):

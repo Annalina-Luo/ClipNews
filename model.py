@@ -595,8 +595,12 @@ def ciderScore(gts_file, res):
     res_dic = {}
     for i in gts:
         gts_dic[i["id"]] = i["caption"]
+        # gts_dic[i["id"]].append(i["caption"])
+        # print(len( gts_dic[i["id"]]))
     for i in res:
         res_dic[i["image_id"]] = i["caption"]
+        # res_dic[i["image_id"]].append(i["caption"])
+        # print(len(res_dic[i["image_id"]]))
     scorer = Cider()
     (score, scores) = scorer.compute_score(gts_dic, res_dic)
     return score
