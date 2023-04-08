@@ -119,13 +119,13 @@ def main(args):
     criterion = nn.CrossEntropyLoss().to(device)
 
     # Creating dataloaders
-    train_ann_path = os.path.join(args.ann_path, 'train_s.json')
+    train_ann_path = os.path.join(args.ann_path, 'test_2.json')
     train_data = NewsDataset(args.image_dir, train_ann_path, preprocess)
     # print('train set size: {}'.format(len(train_data)))
     train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True,
                                                num_workers=args.num_workers, collate_fn=collate_fn)
 
-    dev_ann_path = os.path.join(args.ann_path, 'train_s.json')
+    dev_ann_path = os.path.join(args.ann_path, 'test_2.json')
     dev_data = NewsDataset(args.image_dir, dev_ann_path, preprocess)
     # print('dev set size: {}'.format(len(dev_data)))
     val_loader = torch.utils.data.DataLoader(dataset=dev_data, batch_size=1, shuffle=False,
