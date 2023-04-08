@@ -185,8 +185,6 @@ def train(model, train_loader, encoder_optimizer, optimizer, criterion, epoch):
     t = tqdm(train_loader, desc='Train %d' % epoch)
 
     for i, (imgs, caps_ids, caps_mask, caps_emb, caplens, img_ids, arts_ids, arts_mask, arts_emb, artslens) in enumerate(t):
-        if i > 1:
-            exit()
         # imgs [batch_size, 3,224, 224]
         # caps_ids [batch_size, cap_len]
         # caps_emb [batch_size, cap_len, 768]
