@@ -15,7 +15,7 @@ logging.set_verbosity_error()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # load the RobertaTokenizer and RobertaModel
 text_tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
-text_model = RobertaModel.from_pretrained('roberta-base')
+text_model = RobertaModel.from_pretrained('roberta-base').to(device)
 
 
 def cuda_variable(tensor):
