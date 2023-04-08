@@ -93,6 +93,7 @@ def main(args):
 
         model.apply(initialize_weights)
         start_epoch = args.start_epoch
+        best_cider = args.best_cider
 
     else:
         # Loading model from checkpoint
@@ -104,6 +105,7 @@ def main(args):
         dec = checkpoint['dec']
         model = checkpoint['model']
         best_cider = checkpoint['cider']
+        recent_cider = best_cider
         optimizer = optim.Adam(model.parameters(), lr=args.decoder_lr)
         encoder_optimizer = checkpoint['encoder_optimizer']
         if encoder_optimizer is None:
@@ -131,8 +133,6 @@ def main(args):
     val_loader = torch.utils.data.DataLoader(dataset=dev_data, batch_size=1, shuffle=False,
                                              num_workers=args.num_workers, collate_fn=collate_fn)
 
-    # Initializing best cider score
-    best_cider = args.best_cider
     # Start training
     for epoch in range(start_epoch, args.epochs):
         if args.epochs_since_improvement == 20:
