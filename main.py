@@ -171,7 +171,7 @@ def main(args):
             is_best = 1
 
         save_checkpoint(args.data_name, epoch, args.epochs_since_improvement,
-                        ImageEncoder, enc_text, dec, model, encoder_optimizer, optimizer, recent_cider, is_best)
+                        ImageEncoder, enc_text, dec, model, encoder_optimizer, optimizer, recent_cider)
 
 
 def train(model, train_loader, encoder_optimizer, optimizer, criterion, epoch):
