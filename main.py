@@ -25,14 +25,14 @@ parser.add_argument('--data_name', type=str,
 parser.add_argument('--model_path', type=str,
                     default='.\\model_save\\', help='path for saving trained models')
 parser.add_argument('--image_dir', type=str,
-                    default='F:/NLP/transform-and-tell/data/goodnews/goodnews/images_processed/', help='directory for resized images')
-parser.add_argument('--ann_path', type=str, default='./',
+                    default='./images_processed/', help='directory for resized images')
+parser.add_argument('--ann_path', type=str, default='/mnt/',
                     help='path for annotation json file')
 parser.add_argument('--log_step', type=int, default=100,
                     help='step size for prining log info')
 parser.add_argument('--save_step', type=int, default=1000,
                     help='step size for saving trained models')
-parser.add_argument('--gts_file_dev', type=str, default='./train_gts.json')
+parser.add_argument('--gts_file_dev', type=str, default='/mnt/train_gts.json')
 
 # Model parameters
 parser.add_argument('--embed_dim', type=int, default=768,
@@ -206,11 +206,12 @@ def train(model, train_loader, encoder_optimizer, optimizer, criterion, epoch):
         arts_emb = arts_emb.to(device)
 
         output = model(arts_ids, arts_mask, arts_emb,
-                       caps_mask, caps_emb, imgs)  # compute the output of the model
+                       caps_mask[:, :-1], caps_emb[:, :-1, :], imgs)  # compute the output of the model
 
         output_dim = output.shape[-1]
         output = output.contiguous().view(-1, output_dim)
-        caps_ids = caps_ids.contiguous().view(-1).long()  # torch.Size([2944])
+        caps_ids = caps_ids[:, 1:].contiguous(
+        ).view(-1).long()  # torch.Size([2944])
 
         loss = criterion(output, caps_ids)  # compute the loss
 
@@ -218,7 +219,7 @@ def train(model, train_loader, encoder_optimizer, optimizer, criterion, epoch):
         if encoder_optimizer is not None:
             encoder_optimizer.zero_grad()
 
-        decode_lengths = [c - 2 for c in caplens]
+        decode_lengths = [c - 1 for c in caplens]
         # update the losses meter
         losses.update(loss.item(), sum(decode_lengths))
 
@@ -248,7 +249,8 @@ def validate(model, val_loader, criterion, epoch):
     # Batches
     t = tqdm(val_loader, desc='Dev %d' % epoch)
     for i, (imgs, caps_ids, caps_mask, caps_emb, caplens, img_ids, arts_ids, arts_mask, arts_emb, artslens) in enumerate(t):
-
+        if i > 1:
+            exit()
         # Move the inputs to the device
         imgs = imgs.to(device)
         caps_ids = caps_ids.to(device)
@@ -260,14 +262,14 @@ def validate(model, val_loader, criterion, epoch):
 
         # Compute the model's output and loss
         output = model(arts_ids, arts_mask, arts_emb,
-                       caps_mask, caps_emb, imgs)
+                       caps_mask[:, :-1], caps_emb[:, :-1, :], imgs)
         output_dim = output.shape[-1]
         output = output.contiguous().view(-1, output_dim)
-        caps_ids = caps_ids.contiguous().view(-1).long()
+        caps_ids = caps_ids[:, 1:].contiguous().view(-1).long()
         loss = criterion(output, caps_ids)
 
         # Compute the decode lengths and update the loss and batch time
-        decode_lengths = [c - 2 for c in caplens]
+        decode_lengths = [c - 1 for c in caplens]
         losses.update(loss.item(), sum(decode_lengths))
         batch_time.update(time.time() - start)
 
@@ -279,7 +281,8 @@ def validate(model, val_loader, criterion, epoch):
             model, arts_ids, arts_mask,
             arts_emb, caplens, imgs, device)
 
-        preds = outputs
+        preds = prediction
+        print("preds", preds)
 
         # Append the results to the res list
         for idx, image_id in enumerate(img_ids):
