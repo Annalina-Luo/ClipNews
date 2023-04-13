@@ -1,4 +1,4 @@
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Annalina-Luo/ClipNews/blob/main/ClipNews_training.ipynb\)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Annalina-Luo/ClipNews/blob/main/ClipNews_training.ipynb)
 
 # ClipNews
 
@@ -18,7 +18,7 @@ cd NewsClip
 - For Conda users, you can create a new Conda environment using `conda env create -f environment.yml`.
 
 ## Dataset Preparation
-- Download the datasets and training the model in [Colab](https://colab.research.google.com/github/Annalina-Luo/ClipNews/blob/main/ClipNews_training.ipynb\)
+- Download the datasets and training the model in [Colab](https://colab.research.google.com/github/Annalina-Luo/ClipNews/blob/main/ClipNews_training.ipynb)
 - A quick way to acquire the dataset is sending a email to annalinaluo@gmail.com
 
 ## Traing a model
