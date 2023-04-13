@@ -17,19 +17,11 @@ cd NewsClip
 - For pip users, please type the command `pip install -r requirements.txt`.
 - For Conda users, you can create a new Conda environment using `conda env create -f environment.yml`.
 
+## Dataset Preparation
+- Download the datasets and training the model in Colab
+- A quick way to acquire the dataset is sending a email to annalinaluo@gmail.com
 
 
-<!-- ## Dataset Preparation
-- Download the datasets using the following script. Please cite their paper if you use the data. (e.r. horse2zebra)
-Try twice if it fails the first time!
-```bash
-bash ./datasets/download_dataset.sh horse2zebra
-```
-- You can also build your datasets followed the structure in `./datasets/{name}/`
-- Get segmented results(condition) for training images:
-```bash
-python segmented_prepro.py --dataroot ./datasets/horse2zebra 
-``` -->
 <!-- ## Training/Testing
 - Download a dataset using the previous script (e.g., horse2zebra).
  
