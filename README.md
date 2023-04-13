@@ -21,6 +21,12 @@ cd NewsClip
 - Download the datasets and training the model in [Colab](https://colab.research.google.com/github/Annalina-Luo/ClipNews/blob/main/ClipNews_training.ipynb\)
 - A quick way to acquire the dataset is sending a email to annalinaluo@gmail.com
 
+## Traing a model
+```bash
+python main.py 
+```
+- To continue training, append `--checkpoint="./checkpoint/checkpoint_ClipNews.pth.tar` on the command line.
+
 
 <!-- ## Training/Testing
 - Download a dataset using the previous script (e.g., horse2zebra).
