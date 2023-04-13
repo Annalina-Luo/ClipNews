@@ -26,13 +26,13 @@ parser.add_argument('--model_path', type=str,
                     default='.\\model_save\\', help='path for saving trained models')
 parser.add_argument('--image_dir', type=str,
                     default='./images_processed/', help='directory for resized images')
-parser.add_argument('--ann_path', type=str, default='/mnt/',
+parser.add_argument('--ann_path', type=str, default='./',
                     help='path for annotation json file')
 parser.add_argument('--log_step', type=int, default=100,
                     help='step size for prining log info')
 parser.add_argument('--save_step', type=int, default=1000,
                     help='step size for saving trained models')
-parser.add_argument('--gts_file_dev', type=str, default='/mnt/train_gts.json')
+parser.add_argument('--gts_file_dev', type=str, default='./val_gts.json')
 
 # Model parameters
 parser.add_argument('--embed_dim', type=int, default=768,
@@ -121,13 +121,13 @@ def main(args):
     criterion = nn.CrossEntropyLoss().to(device)
 
     # Creating dataloaders
-    train_ann_path = os.path.join(args.ann_path, 'test_2.json')
+    train_ann_path = os.path.join(args.ann_path, 'train.json')
     train_data = NewsDataset(args.image_dir, train_ann_path, preprocess)
     # print('train set size: {}'.format(len(train_data)))
     train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True,
                                                num_workers=args.num_workers, collate_fn=collate_fn)
 
-    dev_ann_path = os.path.join(args.ann_path, 'test_2.json')
+    dev_ann_path = os.path.join(args.ann_path, 'val.json')
     dev_data = NewsDataset(args.image_dir, dev_ann_path, preprocess)
     # print('dev set size: {}'.format(len(dev_data)))
     val_loader = torch.utils.data.DataLoader(dataset=dev_data, batch_size=1, shuffle=False,
@@ -149,7 +149,7 @@ def main(args):
               epoch=epoch)
 
         # Validating model
-        if epoch > 5:
+        if epoch > 20:
             recent_cider = validate(model=model,
                                     val_loader=val_loader,
                                     criterion=criterion,
@@ -294,12 +294,6 @@ def validate(model, val_loader, criterion, epoch):
     # Compute the CIDEr score and log it into the logger
     score = ciderScore(args.gts_file_dev, res)
 
-    # if logging:
-    #     logger.scalar_summary(score, "Cider", epoch)
-    # # # Log the loss and perplexity into the logger
-    # if logging:
-    #     logger.scalar_summary('loss', losses.avg, epoch)
-    #     logger.scalar_summary('Perplexity', np.exp(losses.avg), epoch)
     return score
 
 

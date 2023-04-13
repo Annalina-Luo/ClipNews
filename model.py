@@ -6,7 +6,6 @@ from torch.autograd import Variable
 from torch.autograd import Variable
 from cider.cider import Cider
 import json
-# import clip
 from transformers import RobertaTokenizer, RobertaModel
 from transformers import logging
 logging.set_verbosity_error()
@@ -581,26 +580,14 @@ def translate_sentence(model, src, src_mask, src_emb, caplens, imgs, device):
     return translated_sentence[:]
 
 
-def bleu(model, src, src_mask, src_emb, caplens, imgs, device):
-
-    prediction = translate_sentence(
-        model, src, src_mask, src_emb, caplens, imgs, device)
-    prediction = prediction
-    return prediction
-
-
 def ciderScore(gts_file, res):
     gts = json.load(open(gts_file, 'r'))
     gts_dic = {}
     res_dic = {}
     for i in gts:
         gts_dic[i["id"]] = i["caption"]
-        # gts_dic[i["id"]].append(i["caption"])
-        # print(len( gts_dic[i["id"]]))
     for i in res:
         res_dic[i["image_id"]] = i["caption"]
-        # res_dic[i["image_id"]].append(i["caption"])
-        # print(len(res_dic[i["image_id"]]))
     scorer = Cider()
     (score, scores) = scorer.compute_score(gts_dic, res_dic)
     return score
