@@ -2,11 +2,8 @@ from PIL import Image
 import skimage.io as io
 import torch
 import torch.utils.data as data
-import torchvision.transforms as transforms
 import json
 import os
-import numpy as np
-import clip
 from transformers import RobertaTokenizer, RobertaModel
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
