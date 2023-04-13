@@ -26,5 +26,8 @@ cd NewsClip
 python main.py --batch_size=64 --TextEncoder_attention=True
 ```
 - To continue training, append `--checkpoint="./checkpoint/checkpoint_ClipNews.pth.tar` on the command line.
+- We create a Colab notebook to make the training process easy, which could be found in `./ClipNews_training.ipynb`
 
 ## Inference
+- We create a Colab notebook to make the training process easy, which could be found in `./ClipNews_inference.ipynb`
+To help visualize the results we provide a Colab notebook found in [Colab](https://colab.research.google.com/github/Annalina-Luo/ClipNews/blob/main/ClipNews_inference.ipynb)
