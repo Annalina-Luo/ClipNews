@@ -1,5 +1,7 @@
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Annalina-Luo/ClipNews/blob/main/ClipNews_training.ipynb)
 
+I am so sorry that I delete the files in my google drive by accident. I have uploaded training data again and updated a new downloading.
+
 # ClipNews
 
 ## Prerequisites
